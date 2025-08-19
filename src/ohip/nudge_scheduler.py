@@ -3,11 +3,9 @@ IX-HapticSight — Optical-Haptic Interaction Protocol (OHIP)
 Engagement Scheduler (spec §9, §5, §6, §7)
 
 Change log (2025-08-19):
-- If the **top-ranked** candidate is suppressed due to **debounce**, do NOT fall
-  back to the next candidate — return None for this cycle to avoid “nagging”.
-- Still allow fallback when the top candidate is suppressed due to **cooldown**
-  (social cooldown) or other non-debounce reasons. This preserves behavior for
-  tests that expect object interaction when shoulder is blocked by policy/safety.
+- Evaluate **social cooldown before debounce** for human-touch candidates.
+  If cooldown blocks the top candidate, we DO fall back to the next candidate.
+- Preserve "no fallback on pure debounce for the top candidate" to avoid nagging.
 """
 
 from __future__ import annotations
@@ -163,12 +161,10 @@ class EngagementScheduler:
                 return nudge
 
             # If the **top** candidate was blocked due to **debounce**, do not fall back.
-            # Return None to avoid appearing as “nagging” by switching targets immediately.
             if idx == 0 and reason == "debounce":
                 return None
 
             # For cooldown or other reasons, try the next candidate.
-            # (E.g., social cooldown should still allow an object-interaction nudge.)
             continue
 
         return None
@@ -242,8 +238,8 @@ class EngagementScheduler:
     ) -> Tuple[Optional[Nudge], str]:
         """
         Convert a ranked candidate into a Nudge while enforcing:
-        - social cooldown (no repeated touches too quickly);
-        - debouncing of identical nudges within window;
+        - **social cooldown** (checked first for human targets);
+        - **debouncing** of identical nudges within window;
         - consent gate for social touch;
         - assign GREEN vs. YELLOW nudge level per spec logic.
 
@@ -255,13 +251,13 @@ class EngagementScheduler:
         category = str(a.get("category", "object"))
         risk_level: SafetyLevel = a["_risk_level"]
 
-        # Debounce identical nudges:
-        if self.cooldowns.debounce(name, xyz, self.policy.debounce_window_s):
-            return None, "debounce"
-
-        # Social cooldown: only for human-target nudges (e.g., shoulder).
+        # --- Social cooldown FIRST for human targets ---
         if category == "human" and self.cooldowns.social_cooldown_active(self.policy.social_cooldown_s):
             return None, "cooldown"
+
+        # --- Debounce (applies to any category) ---
+        if self.cooldowns.debounce(name, xyz, self.policy.debounce_window_s):
+            return None, "debounce"
 
         # Determine nudge level:
         if category == "human" and name == "shoulder":
