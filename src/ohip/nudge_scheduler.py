@@ -2,36 +2,12 @@
 IX-HapticSight — Optical-Haptic Interaction Protocol (OHIP)
 Engagement Scheduler (spec §9, §5, §6, §7)
 
-Purpose:
-- Decide whether to emit a GREEN or YELLOW engagement nudge for safe, human-aware
-  interaction given perception inputs and policy.
-- Enforce "Safety > Consent > Task > Efficiency" priority (spec §9).
-- Debounce repetitive prompts and respect cooldowns after human contact (spec §9).
-- Never suggest actions violating the Safety Map (spec §4/§5).
-
-No external dependencies. Python 3.10+.
-
-Inputs (abstracted to keep this module implementation-agnostic):
-- human_state: mapping with keys:
-    {
-      "present": bool,
-      "distress": float in [0,1],   # affect score; 0=no distress, 1=high
-      "pose": {"frame":"W","xyz":[...],"rpy":[...]},  # optional
-    }
-- consent: ConsentRecord (schemas.ConsentRecord)
-- affordances: list of dicts, each:
-    {
-      "name": "shoulder"|"flat_surface"|...,
-      "pose": Pose.to_dict(),
-      "utility": float in [0,1],    # task/social utility heuristic
-      "category": "human"|"object",
-      "safety_level": "GREEN"|"YELLOW"|"RED"
-    }
-- risk_query: callable(Pose) -> SafetyLevel
-- policy: PolicyProfile (defined below)
-
-Output:
-- Nudge (schemas.Nudge) or None
+Change log (2025-08-19):
+- If the **top-ranked** candidate is suppressed due to **debounce**, do NOT fall
+  back to the next candidate — return None for this cycle to avoid “nagging”.
+- Still allow fallback when the top candidate is suppressed due to **cooldown**
+  (social cooldown) or other non-debounce reasons. This preserves behavior for
+  tests that expect object interaction when shoulder is blocked by policy/safety.
 """
 
 from __future__ import annotations
@@ -179,12 +155,21 @@ class EngagementScheduler:
         # 2) Rank by social need vs. task utility.
         ranked = self._rank_candidates(human_state, consent, candidates)
 
-        # 3) Pick top, enforce consent/cooldowns/debounce and compute Nudge level.
-        for cand in ranked:
-            nudge = self._candidate_to_nudge(cand, human_state, consent)
-            if nudge is None:
-                continue  # blocked (cooldown/debounce/consent)
-            return nudge
+        # 3) Evaluate candidates in order.
+        for idx, cand in enumerate(ranked):
+            nudge, reason = self._candidate_to_nudge_with_reason(cand, human_state, consent)
+
+            if nudge is not None:
+                return nudge
+
+            # If the **top** candidate was blocked due to **debounce**, do not fall back.
+            # Return None to avoid appearing as “nagging” by switching targets immediately.
+            if idx == 0 and reason == "debounce":
+                return None
+
+            # For cooldown or other reasons, try the next candidate.
+            # (E.g., social cooldown should still allow an object-interaction nudge.)
+            continue
 
         return None
 
@@ -249,18 +234,20 @@ class EngagementScheduler:
         ranked.sort(key=lambda t: t[0], reverse=True)
         return [a for _, a in ranked]
 
-    def _candidate_to_nudge(
+    def _candidate_to_nudge_with_reason(
         self,
         a: Dict,
         human_state: Dict,
         consent: ConsentRecord,
-    ) -> Optional[Nudge]:
+    ) -> Tuple[Optional[Nudge], str]:
         """
         Convert a ranked candidate into a Nudge while enforcing:
         - social cooldown (no repeated touches too quickly);
         - debouncing of identical nudges within window;
         - consent gate for social touch;
         - assign GREEN vs. YELLOW nudge level per spec logic.
+
+        Returns (nudge, reason) where reason ∈ {"ok","debounce","cooldown","blocked"}.
         """
         pose: Pose = a["_pose_obj"]
         xyz = _xyz_tuple(pose)
@@ -270,11 +257,11 @@ class EngagementScheduler:
 
         # Debounce identical nudges:
         if self.cooldowns.debounce(name, xyz, self.policy.debounce_window_s):
-            return None
+            return None, "debounce"
 
         # Social cooldown: only for human-target nudges (e.g., shoulder).
         if category == "human" and self.cooldowns.social_cooldown_active(self.policy.social_cooldown_s):
-            return None
+            return None, "cooldown"
 
         # Determine nudge level:
         if category == "human" and name == "shoulder":
@@ -295,7 +282,7 @@ class EngagementScheduler:
         priority = validate_priority(float(a.get("utility", 0.0)))
         normal = _choose_contact_normal(name, pose)
 
-        return Nudge(
+        nudge = Nudge(
             level=level,
             target=pose,
             normal=normal,
@@ -303,6 +290,7 @@ class EngagementScheduler:
             priority=priority,
             expires_in_ms=self.policy.nudge_ttl_ms,
         )
+        return nudge, "ok"
 
 
 # ------------------------- #
