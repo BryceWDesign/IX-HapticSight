@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: 'requirements.txt'  # <-- key the cache properly
+          cache-dependency-path: 'requirements.txt'  # <-- this fixes the error
 
       - name: Install dependencies
         run: |
