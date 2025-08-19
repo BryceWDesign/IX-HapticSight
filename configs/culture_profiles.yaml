@@ -1,0 +1,178 @@
+# IX-HapticSight — Optical-Haptic Interaction Protocol (OHIP)
+# Culture profiles, consent expectations, social-touch defaults, and phrase bank.
+# These settings tailor the Social-Touch Protocol to regional norms while
+# preserving universal safety/consent rules from the spec.
+#
+# NOTE:
+# 1) These are conservative defaults. Validate with local advisors before trials.
+# 2) Force/torque/speed envelopes are NOT defined here; see /configs/force_limits.yaml.
+# 3) Profiles reference force profile names from force_limits.yaml via `bindings.force_profile`.
+
+version: v0.1
+updated: 2025-08-08
+author: Bryce Wooster
+
+# -------------------------------------------------------------------
+# Global defaults used when a field is omitted in a locale profile
+# -------------------------------------------------------------------
+defaults:
+  language: "en"
+  cooldown_s: 10               # min time between human contacts (spec §9)
+  consent:
+    # explicit_only: require contemporaneous, affirmative consent
+    # explicit_or_policy: allow institutional caregiver/clinician policy to authorize
+    social_touch_required_mode: "explicit_only"
+    ttl_seconds: 60            # consent freshness (spec §11)
+  gestures:
+    shoulder_support:
+      allowed: true
+      # Regions prohibited by default; profiles may override.
+      prohibited_regions: ["face", "hair", "hands", "torso"]
+      approach_angle_deg_range: [-30, 30]   # approach from lateral arc
+      allowed_hands: ["left", "right"]
+      dwell_ms_range: [1000, 3000]
+      # Handshake is disallowed by default (consent norms vary); enable per locale if desired.
+    handshake:
+      allowed: false
+  politeness:
+    bow: false
+    head_nod: true
+    verbal_announce: true
+  bindings:
+    # Maps social-touch to a force profile defined in force_limits.yaml
+    force_profile: "human_soft_touch_v1"
+
+# -------------------------------------------------------------------
+# Locale profiles
+# Keep differences minimal and defensible; avoid stereotypes.
+# -------------------------------------------------------------------
+profiles:
+
+  default:
+    language: "en"
+    cooldown_s: 10
+    consent:
+      social_touch_required_mode: "explicit_only"
+    gestures:
+      shoulder_support:
+        allowed: true
+        prohibited_regions: ["face", "hair", "hands", "torso"]
+        approach_angle_deg_range: [-30, 30]
+        allowed_hands: ["left", "right"]
+        dwell_ms_range: [1000, 3000]
+      handshake:
+        # Still requires explicit consent if enabled later in UI.
+        allowed: false
+    politeness:
+      bow: false
+      head_nod: true
+      verbal_announce: true
+    bindings:
+      force_profile: "human_soft_touch_v1"
+    announce:
+      phrase_key: "support_request"   # see phrase_bank
+      language_override: null         # use profile language if null
+
+  us:
+    # United States / general North America (conservative)
+    language: "en"
+    cooldown_s: 10
+    consent:
+      social_touch_required_mode: "explicit_only"
+    gestures:
+      shoulder_support:
+        allowed: true
+        dwell_ms_range: [1000, 2500]
+      handshake:
+        allowed: false
+    politeness:
+      bow: false
+      head_nod: true
+      verbal_announce: true
+    bindings:
+      force_profile: "human_soft_touch_v1"
+    announce:
+      phrase_key: "support_request"
+
+  jp:
+    # Japan (formal; allow bow affordance; slightly longer cooldown)
+    language: "ja"
+    cooldown_s: 12
+    consent:
+      social_touch_required_mode: "explicit_only"
+    gestures:
+      shoulder_support:
+        allowed: true
+        dwell_ms_range: [1000, 2000]
+      handshake:
+        allowed: false
+    politeness:
+      bow: true
+      head_nod: true
+      verbal_announce: true
+    bindings:
+      force_profile: "human_soft_touch_v1"
+    announce:
+      phrase_key: "support_request"
+
+  de:
+    # Germany (direct verbal announce; conservative defaults)
+    language: "de"
+    cooldown_s: 10
+    consent:
+      social_touch_required_mode: "explicit_only"
+    gestures:
+      shoulder_support:
+        allowed: true
+      handshake:
+        allowed: false
+    politeness:
+      bow: false
+      head_nod: true
+      verbal_announce: true
+    bindings:
+      force_profile: "human_soft_touch_v1"
+    announce:
+      phrase_key: "support_request"
+
+  in:
+    # India (language varies; keep English default here; conservative)
+    language: "en"
+    cooldown_s: 10
+    consent:
+      social_touch_required_mode: "explicit_only"
+    gestures:
+      shoulder_support:
+        allowed: true
+      handshake:
+        allowed: false
+    politeness:
+      bow: false
+      head_nod: true
+      verbal_announce: true
+    bindings:
+      force_profile: "human_soft_touch_v1"
+    announce:
+      phrase_key: "support_request"
+
+# -------------------------------------------------------------------
+# Phrase bank — minimal, neutral phrasing for consent/announce.
+# The system should pick phrase by (profile.announce.language_override or profile.language).
+# -------------------------------------------------------------------
+phrase_bank:
+  support_request:
+    en: "I'm here. May I place my hand on your shoulder for support?"
+    es: "Estoy aquí. ¿Puedo poner mi mano en tu hombro para apoyarte?"
+    ja: "ここにいます。肩に手を置いてもよろしいですか？"
+    de: "Ich bin da. Darf ich meine Hand zur Unterstützung auf Ihre Schulter legen?"
+    fr: "Je suis là. Puis-je poser ma main sur votre épaule pour vous soutenir?"
+
+# -------------------------------------------------------------------
+# Notes:
+# - Handshake remains disabled globally to avoid conflicting with
+#   `prohibited_regions: hands`. If explicitly enabled in a locale,
+#   the execution layer must treat it as an override and still require
+#   explicit contemporaneous consent.
+# - Applications may add site-specific profiles (e.g., clinical vs. home care).
+# - If `language_override` is set, it forces phrase selection from that locale.
+# -------------------------------------------------------------------
