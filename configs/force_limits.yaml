@@ -1,0 +1,131 @@
+# IX-HapticSight — Optical-Haptic Interaction Protocol (OHIP)
+# Default human-safe envelopes and safety timers (v0.1)
+# These values mirror /docs/spec.md and /docs/state_machine.md.
+# Tune per hardware during HIL testing. Do NOT exceed institutional policy.
+
+version: v0.1
+updated: 2025-08-08
+author: Bryce Wooster
+
+# -------------------------------
+# GLOBAL SAFETY TIMERS & RATES
+# -------------------------------
+safety:
+  # RED hazard end-to-end stop budget (spec invariant: ≤100 ms).
+  red_stop_ms: 100
+  # During APPROACH/PRECONTACT, re-validate plan and risk map at ≥20 Hz.
+  revalidate_hz: 20
+  # Local impedance controller loop target (spec: 500–1000 Hz).
+  contact_loop_hz_min: 500
+  contact_loop_hz_pref: 1000
+
+consent:
+  # Default consent TTL; PRECONTACT must re-check freshness.
+  ttl_seconds_default: 60
+
+# -------------------------------
+# END-EFFECTOR PROFILES
+# -------------------------------
+# Profiles define the hard envelopes enforced by the planner and safety gate.
+# Choose the most conservative profile that still completes the task.
+
+profiles:
+
+  # Human soft-touch — social support (e.g., shoulder contact)
+  human_soft_touch_v1:
+    description: "Conservative envelope for culturally safe shoulder contact."
+    # Clamp peak normal force to ~1.0 N with 1.2 N absolute ceiling (spec §7).
+    max_force_N: 1.2
+    # Small torques to avoid twisting on skin/clothing.
+    max_torque_Nm: 0.15
+    # Approach/release speeds within visible, non-startling range (spec §7).
+    approach_speed_mps: 0.15
+    release_speed_mps: 0.20
+    # Impedance ranges used by planner (spec §7 / §16).
+    impedance:
+      normal_N_per_mm: [0.3, 0.6]
+      tangential_N_per_mm: [0.1, 0.3]
+    # Thermal comfort/safety: do not contact if EE or target exceeds this.
+    # (Conservative; verify with HIL & policy. Common discomfort ~42–45 °C.)
+    max_surface_temp_C: 42
+    # Minimum dwell and maximum dwell used by contact planner for social touch.
+    dwell_ms_min: 1000
+    dwell_ms_max: 3000
+    # Cooldown after any human contact before suggesting another (spec §9).
+    social_cooldown_s: 10
+
+  # Object interaction — light manipulation near humans
+  object_light_manipulation_v1:
+    description: "For placing/picking light objects near people; non-rigid EE."
+    # Higher than human-touch, still collaborative-safe; tune with HIL.
+    max_force_N: 5.0
+    max_torque_Nm: 0.5
+    approach_speed_mps: 0.25
+    release_speed_mps: 0.30
+    impedance:
+      normal_N_per_mm: [0.6, 1.2]
+      tangential_N_per_mm: [0.2, 0.6]
+    max_surface_temp_C: 45
+    dwell_ms_min: 0
+    dwell_ms_max: 5000
+
+  # Inspection/probing — fingertip/stylus contact on rigid surfaces
+  inspection_probe_v1:
+    description: "Low-force probing/inspection; rigid surfaces only."
+    max_force_N: 2.0
+    max_torque_Nm: 0.3
+    approach_speed_mps: 0.20
+    release_speed_mps: 0.25
+    impedance:
+      normal_N_per_mm: [0.4, 0.9]
+      tangential_N_per_mm: [0.1, 0.4]
+    max_surface_temp_C: 45
+    dwell_ms_min: 100
+    dwell_ms_max: 3000
+
+# -------------------------------
+# DEFAULT BINDINGS
+# -------------------------------
+defaults:
+  # Use this profile when performing the Social-Touch Protocol v0.1.
+  social_touch_profile: human_soft_touch_v1
+  # Use this when interacting with tables, handles, non-fragile objects near people.
+  object_profile: object_light_manipulation_v1
+  # For tapping/probing during calibration/inspection tasks.
+  inspection_profile: inspection_probe_v1
+
+# -------------------------------
+# CONTROLLER & MOTION SAFETY
+# -------------------------------
+controller:
+  # S-curve limits to prevent startle; planner must respect these caps.
+  jerk_limit_mps3: 2.0
+  accel_limit_mps2: 0.5
+  # Retreat distance after veto/timeout before re-planning.
+  retreat_distance_m: 0.10
+
+# -------------------------------
+# LOGGING & PRIVACY DEFAULTS
+# -------------------------------
+logging:
+  # Video logs OFF by default; if ON, faces must be blurred before persistence/export.
+  video_enabled_default: false
+  face_blur_required_if_video: true
+  # Always log safety/veto/emergency events.
+  events:
+    - VERIFY_TO_APPROACH
+    - CONTACT_BEGIN
+    - CONTACT_END
+    - VETO
+    - EMERGENCY_RETREAT
+    - SAFE_HOLD_ENTER
+    - SAFE_HOLD_EXIT
+
+# -------------------------------
+# NOTES
+# -------------------------------
+# 1) Values above are conservative starting points. Validate with a load cell
+#    and temperature instrumentation during HIL before any human trials.
+# 2) Never raise envelopes without updating test artifacts and institutional approvals.
+# 3) These envelopes are enforced alongside the tri-level Safety Map:
+#    RED = prohibited, YELLOW = verify, GREEN = allowed (within envelopes).
