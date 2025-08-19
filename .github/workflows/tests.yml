@@ -24,11 +24,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+          cache-dependency-path: 'requirements.txt'  # <-- key the cache properly
 
-      - name: Install test/deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pyyaml
+          pip install -r requirements.txt
 
       - name: Run unit tests
         run: |
