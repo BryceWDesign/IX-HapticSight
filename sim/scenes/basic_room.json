@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "scene": "basic_room",
+    "version": "v0.1",
+    "updated": "2025-08-08",
+    "author": "Bryce",
+    "world_frame": "W",
+    "notes": "Minimal scene for OHIP v0.1 smoke tests: safe table surface, YELLOW hot kettle, RED space heater, human shoulder affordance."
+  },
+
+  "robot": {
+    "body_pose_W": { "frame": "W", "xyz": [0.0, 0.0, 0.0], "rpy": [0.0, 0.0, 0.0] }
+  },
+
+  "human": {
+    "id": "person-1",
+    "present": true,
+    "affect": { "distress": 0.70 },
+    "poses": {
+      "shoulder_right_W": { "frame": "W", "xyz": [0.42, -0.18, 1.36], "rpy": [0.0, 0.0, 1.57] }
+    },
+    "consent": {
+      "mode": "explicit",
+      "source": "verbal",
+      "scope": ["shoulder_contact"],
+      "ttl_s": 60
+    }
+  },
+
+  "objects": [
+    {
+      "name": "table",
+      "category": "furniture",
+      "pose_W": { "frame": "W", "xyz": [0.80, 0.10, 0.75], "rpy": [0.0, 0.0, 0.0] },
+      "size_xyz_m": [1.20, 0.80, 0.03],
+      "top_surface_z": 0.90
+    },
+    {
+      "name": "cup",
+      "category": "kitchenware",
+      "pose_W": { "frame": "W", "xyz": [0.90, 0.10, 0.92], "rpy": [0.0, 0.0, 0.0] },
+      "notes": "Room-temperature cup on table (GREEN)."
+    },
+    {
+      "name": "kettle",
+      "category": "appliance",
+      "pose_W": { "frame": "W", "xyz": [1.10, 0.05, 0.92], "rpy": [0.0, 0.0, 0.0] },
+      "surface_temp_C": 48,
+      "notes": "Warm kettle (YELLOW: verify or avoid contact)."
+    },
+    {
+      "name": "space_heater",
+      "category": "appliance",
+      "pose_W": { "frame": "W", "xyz": [1.40, -0.30, 0.30], "rpy": [0.0, 0.0, 0.0] },
+      "notes": "Active heating element region (RED)."
+    }
+  ],
+
+  "safety_regions": [
+    {
+      "name": "table_top_safe",
+      "shape": "aabb",
+      "aabb_min_W": [0.20, -0.30, 0.88],
+      "aabb_max_W": [1.40,  0.50, 0.96],
+      "hazard_class": "unknown",
+      "level": "GREEN"
+    },
+    {
+      "name": "kettle_hot_zone",
+      "shape": "aabb",
+      "aabb_min_W": [1.05, -0.05, 0.88],
+      "aabb_max_W": [1.18,  0.15, 1.00],
+      "hazard_class": "hot",
+      "level": "YELLOW"
+    },
+    {
+      "name": "heater_danger_zone",
+      "shape": "aabb",
+      "aabb_min_W": [1.32, -0.40, 0.20],
+      "aabb_max_W": [1.48, -0.20, 0.60],
+      "hazard_class": "hot",
+      "level": "RED"
+    }
+  ],
+
+  "affordances": [
+    {
+      "name": "shoulder",
+      "category": "human",
+      "pose": { "frame": "W", "xyz": [0.42, -0.18, 1.36], "rpy": [0.0, 0.0, 1.57] },
+      "utility": 0.90,
+      "safety_level": "GREEN",
+      "notes": "Matches spec §7 values; used by nudge scheduler for social support."
+    },
+    {
+      "name": "flat_surface",
+      "category": "object",
+      "pose": { "frame": "W", "xyz": [0.80, 0.10, 0.90], "rpy": [0.0, 0.0, 0.0] },
+      "utility": 0.40,
+      "safety_level": "GREEN",
+      "notes": "Center area of table top."
+    },
+    {
+      "name": "cup_pick",
+      "category": "object",
+      "pose": { "frame": "W", "xyz": [0.90, 0.10, 0.92], "rpy": [0.0, 0.0, 0.0] },
+      "utility": 0.50,
+      "safety_level": "GREEN",
+      "notes": "Cup pickup point."
+    },
+    {
+      "name": "kettle_handle",
+      "category": "object",
+      "pose": { "frame": "W", "xyz": [1.12, 0.02, 0.98], "rpy": [0.0, 0.0, 0.0] },
+      "utility": 0.30,
+      "safety_level": "YELLOW",
+      "notes": "Warm; requires verification before contact."
+    }
+  ],
+
+  "policy": {
+    "culture_profile": "us",
+    "force_profile_binding": "human_soft_touch_v1",
+    "announce_phrase_key": "support_request"
+  }
+}
