@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11']
+        python-version: ["3.10", "3.11"]
 
     steps:
       - name: Checkout
@@ -23,13 +23,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          cache-dependency-path: 'requirements.txt'  # <-- this fixes the error
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            pyproject.toml
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e .
 
       - name: Run unit tests
         run: |
@@ -38,3 +41,12 @@ jobs:
       - name: Quickstart smoke (scene → nudge → plan → safety)
         run: |
           python examples/quickstart.py --scene sim/scenes/basic_room.json --verbose
+
+      - name: Import benchmark catalog smoke
+        run: |
+          python - <<'PY'
+          from ohip_bench.scenarios import make_core_catalog
+          catalog = make_core_catalog()
+          assert len(catalog) >= 3
+          print("benchmark scenarios:", [scenario.scenario_id for scenario in catalog])
+          PY
