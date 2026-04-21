@@ -52,6 +52,8 @@ class ConsentSource(str, Enum):
     GESTURE = "gesture"
     UI = "ui"
     PROFILE = "profile"
+    BENCHMARK = "benchmark"
+    REPLAY = "replay"
 
 
 class NudgeLevel(str, Enum):
@@ -235,9 +237,10 @@ class ImpedanceProfile:
     tangential_N_per_mm: Tuple[float, float] # (min, max)
 
 
-@dataclass
+@dataclass(init=False)
 class ContactPlan:
     """Concrete contact execution plan (bounded by safety envelopes)."""
+
     target: Pose
     contact_normal: Vector3
     peak_force_N: float
@@ -245,8 +248,74 @@ class ContactPlan:
     approach_speed_mps: float
     release_speed_mps: float
     impedance: ImpedanceProfile
-    rationale: str = ""
-    consent_mode: ConsentMode = ConsentMode.NONE
+    rationale: str
+    consent_mode: ConsentMode
+    contact_zone: str
+
+    def __init__(
+        self,
+        *,
+        target: Pose,
+        contact_normal: Optional[Vector3] = None,
+        normal: Optional[Vector3] = None,
+        peak_force_N: Optional[float] = None,
+        max_force_N: Optional[float] = None,
+        dwell_ms: int | Tuple[int, int] | List[int] = 1500,
+        approach_speed_mps: float = 0.15,
+        release_speed_mps: float = 0.20,
+        impedance: ImpedanceProfile | Dict[str, Any] | None = None,
+        rationale: str = "",
+        consent_mode: ConsentMode | str = ConsentMode.NONE,
+        contact_zone: str = "",
+    ) -> None:
+        self.target = target
+        self.contact_normal = self._coerce_vector(contact_normal if contact_normal is not None else normal)
+        chosen_force = peak_force_N if peak_force_N is not None else max_force_N
+        self.peak_force_N = float(1.0 if chosen_force is None else chosen_force)
+        self.dwell_ms = self._coerce_dwell_ms(dwell_ms)
+        self.approach_speed_mps = float(approach_speed_mps)
+        self.release_speed_mps = float(release_speed_mps)
+        self.impedance = self._coerce_impedance(impedance)
+        self.rationale = str(rationale)
+        self.consent_mode = consent_mode if isinstance(consent_mode, ConsentMode) else ConsentMode(str(consent_mode))
+        self.contact_zone = str(contact_zone)
+        self.validate()
+
+    @staticmethod
+    def _coerce_vector(value: Optional[Vector3]) -> Vector3:
+        if value is None:
+            return Vector3(0.0, 0.0, 1.0)
+        if isinstance(value, Vector3):
+            return value
+        raise TypeError("contact normal must be a Vector3")
+
+    @staticmethod
+    def _coerce_dwell_ms(value: int | Tuple[int, int] | List[int]) -> int:
+        if isinstance(value, (tuple, list)):
+            assert len(value) == 2, "dwell_ms range must contain exactly 2 elements"
+            lo = int(value[0])
+            hi = int(value[1])
+            assert lo <= hi, "dwell_ms range must satisfy min <= max"
+            return int(round((lo + hi) / 2.0))
+        return int(value)
+
+    @staticmethod
+    def _coerce_impedance(value: ImpedanceProfile | Dict[str, Any] | None) -> ImpedanceProfile:
+        if isinstance(value, ImpedanceProfile):
+            return value
+        data = value or {}
+        return ImpedanceProfile(
+            normal_N_per_mm=tuple(map(float, data.get("normal_N_per_mm", [0.3, 0.6]))),
+            tangential_N_per_mm=tuple(map(float, data.get("tangential_N_per_mm", [0.1, 0.3]))),
+        )
+
+    @property
+    def normal(self) -> Vector3:
+        return self.contact_normal
+
+    @property
+    def max_force_N(self) -> float:
+        return self.peak_force_N
 
     def validate(self) -> None:
         assert self.peak_force_N >= 0.0, "peak_force_N must be >= 0"
@@ -259,7 +328,7 @@ class ContactPlan:
             assert 0.0 <= lo <= hi, f"impedance {name} invalid (min <= max required)"
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "target": self.target.to_dict(),
             "normal": self.contact_normal.as_list(),
             "peak_force_N": float(self.peak_force_N),
@@ -273,27 +342,24 @@ class ContactPlan:
             "rationale": self.rationale,
             "consent_mode": self.consent_mode.value,
         }
+        if self.contact_zone:
+            data["contact_zone"] = self.contact_zone
+        return data
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "ContactPlan":
-        imp = d.get("impedance", {})
-        profile = ImpedanceProfile(
-            normal_N_per_mm=tuple(map(float, imp.get("normal_N_per_mm", [0.3, 0.6]))),   # spec defaults
-            tangential_N_per_mm=tuple(map(float, imp.get("tangential_N_per_mm", [0.1, 0.3]))),
-        )
-        plan = ContactPlan(
+        return ContactPlan(
             target=Pose.from_dict(d["target"]),
-            contact_normal=Vector3.from_list(d.get("normal", [0.0, 0.0, 1.0])),
-            peak_force_N=float(d.get("peak_force_N", 1.0)),
-            dwell_ms=int(d.get("dwell_ms", 1500)),
+            contact_normal=Vector3.from_list(d.get("contact_normal", d.get("normal", [0.0, 0.0, 1.0]))),
+            peak_force_N=float(d.get("peak_force_N", d.get("max_force_N", 1.0))),
+            dwell_ms=d.get("dwell_ms", 1500),
             approach_speed_mps=float(d.get("approach_speed_mps", 0.15)),
             release_speed_mps=float(d.get("release_speed_mps", 0.2)),
-            impedance=profile,
+            impedance=d.get("impedance", {}),
             rationale=str(d.get("rationale", "")),
             consent_mode=ConsentMode(d.get("consent_mode", "none")),
+            contact_zone=str(d.get("contact_zone", "")),
         )
-        plan.validate()
-        return plan
 
 
 @dataclass
