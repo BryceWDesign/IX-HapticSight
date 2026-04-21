@@ -18,6 +18,10 @@ from typing import Iterable
 from .models import BenchmarkDomain, BenchmarkOutcome, BenchmarkResult
 
 
+def _round_ms(value: float) -> float:
+    return round(float(value), 6)
+
+
 @dataclass(frozen=True)
 class BenchmarkSummary:
     """
@@ -83,7 +87,7 @@ def summarize_results(results: Iterable[BenchmarkResult]) -> BenchmarkSummary:
         elif result.outcome == BenchmarkOutcome.SKIPPED:
             skipped += 1
 
-    average_duration_ms = 0.0 if total == 0 else duration_sum / float(total)
+    average_duration_ms = 0.0 if total == 0 else _round_ms(duration_sum / float(total))
 
     return BenchmarkSummary(
         total=total,
