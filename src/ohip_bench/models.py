@@ -24,6 +24,10 @@ from time import time
 from typing import Any, Optional
 
 
+def _round_ms(value: float) -> float:
+    return round(float(value), 6)
+
+
 class BenchmarkDomain(str, Enum):
     CONSENT = "CONSENT"
     SAFETY = "SAFETY"
@@ -155,7 +159,7 @@ class BenchmarkResult:
 
     @property
     def duration_ms(self) -> float:
-        return max(0.0, (float(self.finished_at_utc_s) - float(self.started_at_utc_s)) * 1000.0)
+        return max(0.0, _round_ms((float(self.finished_at_utc_s) - float(self.started_at_utc_s)) * 1000.0))
 
     def to_dict(self) -> dict[str, Any]:
         return {
