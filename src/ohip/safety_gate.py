@@ -25,7 +25,7 @@ This module does not command motion; it only reasons about *permission to procee
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple, Dict, Any, List
+from typing import Callable, Optional, Tuple, Dict, Any
 from time import time
 
 from .schemas import (
@@ -104,6 +104,7 @@ class SafetyGate:
             or self._defaults.get("social_touch_profile")
             or next(iter(self._profiles.keys()), None)
         )
+        self._active_profile = self._profile_name
         self._profile = dict(self._profiles.get(self._profile_name, {}))
 
         self._hw = hw_iface or HardwareInterface()
