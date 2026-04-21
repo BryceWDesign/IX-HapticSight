@@ -169,7 +169,7 @@ class RuntimeService:
                 response=execution_response,
             )
 
-            if (
+            if execution_response.status != ExecutionResultStatus.ACCEPTED and (
                 session.interaction_state != prev_interaction
                 or session.execution_state != prev_execution
             ):
@@ -329,8 +329,7 @@ class RuntimeService:
         Reflect immediate execution-adapter response into the runtime session.
         """
         if response.status == ExecutionResultStatus.ACCEPTED:
-            session.execution_state = ExecutionState.READY
-            session.runtime_health = session.runtime_health
+            pass
         elif response.status == ExecutionResultStatus.RUNNING:
             session.execution_state = ExecutionState.EXECUTING
         elif response.status == ExecutionResultStatus.RETREATING:
