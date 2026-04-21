@@ -152,8 +152,9 @@ class EventReplay:
         )
 
     def by_request(self, request_id: str) -> ReplaySlice:
+        prefix = f"{request_id}:"
         return self.filter(
-            lambda event: event.request_id == request_id,
+            lambda event: event.request_id == request_id or event.event_id.startswith(prefix),
             name=f"request:{request_id}",
         )
 
