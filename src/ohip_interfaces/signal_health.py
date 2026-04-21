@@ -20,6 +20,10 @@ from time import time
 from typing import Optional
 
 
+def _round_ms(value: float) -> float:
+    return round(float(value), 6)
+
+
 class SignalHealth(str, Enum):
     """
     Health classification for one normalized signal source.
@@ -57,7 +61,7 @@ class FreshnessPolicy:
 
     def is_fresh(self, *, sample_timestamp_utc_s: float, now_utc_s: Optional[float] = None) -> bool:
         now = float(now_utc_s if now_utc_s is not None else time())
-        age_ms = (now - float(sample_timestamp_utc_s)) * 1000.0
+        age_ms = _round_ms((now - float(sample_timestamp_utc_s)) * 1000.0)
         return age_ms <= float(self.max_age_ms)
 
 
@@ -81,10 +85,10 @@ class SignalQuality:
 
     def age_ms(self, *, now_utc_s: Optional[float] = None) -> float:
         now = float(now_utc_s if now_utc_s is not None else time())
-        return max(0.0, (now - float(self.sample_timestamp_utc_s)) * 1000.0)
+        return max(0.0, _round_ms((now - float(self.sample_timestamp_utc_s)) * 1000.0))
 
     def transport_latency_ms(self) -> float:
-        return max(0.0, (float(self.received_timestamp_utc_s) - float(self.sample_timestamp_utc_s)) * 1000.0)
+        return max(0.0, _round_ms((float(self.received_timestamp_utc_s) - float(self.sample_timestamp_utc_s)) * 1000.0))
 
     def is_fresh(self, policy: FreshnessPolicy, *, now_utc_s: Optional[float] = None) -> bool:
         return policy.is_fresh(
