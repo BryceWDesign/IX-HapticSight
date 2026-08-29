@@ -406,12 +406,12 @@ It only means the repository is attempting to align its architecture and documen
 
 The highest-value next steps are:
 
-1. add stronger tests for consent, veto, force limits, and state transitions
-2. create structured event and replay artifacts
-3. add benchmark scenario and metric definitions
-4. add integrity handling for critical configs
-5. add runtime boundary code that preserves policy/safety separation
-6. add HIL scaffolding and evidence templates
+1. extend measured hardware tests for consent, veto, force limits, and state transitions
+2. exercise the existing structured event and replay artifacts against HIL data
+3. expand benchmark scenarios with measured robot cases
+4. extend integrity handling to signed deployment configuration
+5. validate the implemented runtime boundary on a physical controller
+6. connect the implemented HIL harness to measured hardware evidence
 
 Those steps would materially raise the maturity of the crosswalk.
 

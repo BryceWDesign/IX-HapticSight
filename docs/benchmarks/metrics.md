@@ -268,7 +268,7 @@ These are still software-path metrics unless backed by real runtime measurements
 
 This is where the metric system becomes much more serious.
 
-Once HIL scaffolding is connected to actual measurements, the benchmark/evidence layer should eventually support metrics like:
+Once the HIL harness is connected to actual measurements, the benchmark/evidence layer should eventually support metrics like:
 
 ### 7.1 Contact metrics
 - peak measured force

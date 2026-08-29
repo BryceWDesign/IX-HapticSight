@@ -6,7 +6,7 @@ and tests. Keeps versioning centralized.
 
 Versioning
 ----------
-__version__        : project/package version (v0.1.0 for the v0.1 spec drop)
+__version__        : project/package version (v0.2.0 for the v0.1 spec drop)
 __schema_version__ : canonical schema version from ohip.schemas
 
 Do not import heavy dependencies here. Keep imports shallow.
@@ -34,7 +34,7 @@ from .rest_pose import RestPoseGenerator, RestConfig
 from .consent_manager import ConsentManager, ProfileRules
 
 # Project/package version for this release of the reference implementation.
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # versions

@@ -19,7 +19,7 @@ from time import time
 from datetime import datetime, timezone
 
 
-OHIP_SCHEMAS_VERSION = "v0.1.0"
+OHIP_SCHEMAS_VERSION = "v0.2.0"
 
 
 # ------------------------- #

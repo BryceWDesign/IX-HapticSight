@@ -10,7 +10,7 @@ This package is reserved for:
 It is intentionally separate from:
 - the stable OHIP protocol core in ``src/ohip``
 - runtime orchestration in ``src/ohip_runtime``
-- future ROS 2 integration layers
+- ROS 2 integration layers
 
 The design goal is simple:
 important runtime behavior should be inspectable after the fact without relying
@@ -23,4 +23,4 @@ __all__ = [
     "__version__",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
