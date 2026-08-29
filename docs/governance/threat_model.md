@@ -240,9 +240,9 @@ Mitigation direction:
 Execution may involve:
 - simulation backend
 - test executor
-- future ROS 2 bridge
-- future motion-planning backend
-- future robot controller bridge
+- ROS 2 bridge
+- robot-specific motion-planning backend
+- robot controller bridge
 
 Risk:
 - backend ignores limits

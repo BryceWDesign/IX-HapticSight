@@ -3,8 +3,8 @@ In-memory simulated execution adapter for IX-HapticSight.
 
 This adapter is intentionally simple and deterministic. Its purpose is to:
 - exercise the execution adapter contract in tests
-- provide a backend-agnostic placeholder for local runtime integration
-- support replay and benchmark scaffolding before any ROS 2 or hardware bridge
+- provide a deterministic backend for local runtime integration
+- support replay and benchmarks independently of ROS 2 or hardware
 
 It does not perform real motion planning or physics.
 It simulates execution state transitions in a conservative, inspectable way.

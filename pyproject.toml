@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ix-hapticsight-ohip"
+version = "0.2.0"
+description = "Safety-first perception-to-contact authority for bounded robot and XR interaction."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Bryce Lovell"}]
+dependencies = ["pyyaml>=6.0", "pillow>=10.0"]
+keywords = ["robotics", "haptics", "computer-vision", "human-robot-interaction", "safety", "ros2", "xr"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -2,7 +2,7 @@
 Runtime coordinator for IX-HapticSight.
 
 This module provides the first real orchestration layer that sits above the
-protocol core in ``src/ohip`` and below any future ROS 2 or backend-specific
+protocol core in ``src/ohip`` and below any ROS 2 or backend-specific
 transport layer.
 
 The coordinator is intentionally conservative:

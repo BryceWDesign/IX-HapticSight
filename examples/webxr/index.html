@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IX-HapticSight WebXR Safety Observer</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #101216; color: #f4f5f7; }
+    #hud { position: fixed; z-index: 2; top: 12px; left: 12px; padding: 12px; background: rgba(0,0,0,.72); border-radius: 8px; max-width: 420px; }
+    #scene { width: 100vw; height: 100vh; display: block; }
+    button { padding: 8px 12px; margin-top: 8px; }
+    .ok { color: #8ef58e; } .warn { color: #ffd36a; } .stop { color: #ff7676; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <strong>IX-HapticSight Safety Observer</strong>
+    <div id="status">Connecting…</div>
+    <button id="xr" hidden>Enter WebXR</button>
+  </div>
+  <canvas id="scene"></canvas>
+<script>
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const statusEl = document.getElementById('status');
+const xrButton = document.getElementById('xr');
+let state = {};
+
+function resize() { canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', resize); resize();
+
+function colorFor(level) {
+  if (level === 'RED') return '#ff4d4d';
+  if (level === 'YELLOW') return '#ffd54d';
+  return '#55e16a';
+}
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const markers = state.markers || [];
+  const scale = Math.min(canvas.width, canvas.height) * 0.32;
+  for (const m of markers) {
+    const x = canvas.width/2 + (m.xyz_m[0] || 0) * scale;
+    const y = canvas.height/2 - (m.xyz_m[2] || 0) * scale;
+    const size = Math.max(8, (m.size_m || .05) * scale);
+    ctx.fillStyle = colorFor(m.level);
+    ctx.globalAlpha = Math.max(.25, Math.min(1, m.confidence ?? 1));
+    ctx.fillRect(x-size/2, y-size/2, size, size);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.fillText(m.label || m.level, x+size/2+4, y);
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+async function poll() {
+  try {
+    const response = await fetch('/state.json', {cache:'no-store'});
+    state = await response.json();
+    const auth = state.safety_authority || 'UNKNOWN';
+    const cls = auth === 'ALLOW' ? 'ok' : (auth === 'DENY' ? 'stop' : 'warn');
+    statusEl.innerHTML = `<span class="${cls}">${auth}</span> | force ≤ ${Number(state.force_cap_N||0).toFixed(2)} N | speed ≤ ${Number(state.speed_cap_mps||0).toFixed(3)} m/s<br>${state.reason||''}`;
+  } catch (e) { statusEl.textContent = 'State feed unavailable'; }
+  setTimeout(poll, 100);
+}
+poll();
+
+// Immersive WebXR path. Hazard markers are rendered as real XR-space points
+// in the local reference space. The 2D canvas remains the desktop fallback.
+function multiply4x4(a, b) {
+  const out = new Float32Array(16);
+  for (let c = 0; c < 4; c++) {
+    for (let r = 0; r < 4; r++) {
+      out[c*4+r] = a[0*4+r]*b[c*4+0] + a[1*4+r]*b[c*4+1] + a[2*4+r]*b[c*4+2] + a[3*4+r]*b[c*4+3];
+    }
+  }
+  return out;
+}
+function xrColor(level) {
+  if (level === 'RED') return [1.0, 0.15, 0.15, 0.95];
+  if (level === 'YELLOW') return [1.0, 0.75, 0.05, 0.90];
+  return [0.15, 1.0, 0.30, 0.85];
+}
+function compileShader(gl, type, source) {
+  const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+  return shader;
+}
+function makeXRProgram(gl) {
+  const vertex = compileShader(gl, gl.VERTEX_SHADER, `
+    attribute vec3 a_position;
+    attribute vec4 a_color;
+    attribute float a_size;
+    uniform mat4 u_viewProjection;
+    varying vec4 v_color;
+    void main() {
+      gl_Position = u_viewProjection * vec4(a_position, 1.0);
+      gl_PointSize = a_size;
+      v_color = a_color;
+    }
+  `);
+  const fragment = compileShader(gl, gl.FRAGMENT_SHADER, `
+    precision mediump float;
+    varying vec4 v_color;
+    void main() {
+      vec2 d = gl_PointCoord - vec2(0.5);
+      if (dot(d,d) > 0.25) discard;
+      gl_FragColor = v_color;
+    }
+  `);
+  const program = gl.createProgram(); gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  return program;
+}
+async function startXR() {
+  const session = await navigator.xr.requestSession('immersive-ar', {requiredFeatures:['local'], optionalFeatures:['local-floor']});
+  const xrCanvas = document.createElement('canvas');
+  const gl = xrCanvas.getContext('webgl', {xrCompatible:true, alpha:true, antialias:true});
+  if (!gl) throw new Error('WebGL is required for WebXR hazard rendering');
+  if (gl.makeXRCompatible) await gl.makeXRCompatible();
+  session.updateRenderState({baseLayer: new XRWebGLLayer(session, gl)});
+  const refSpace = await session.requestReferenceSpace('local');
+  const program = makeXRProgram(gl);
+  const buffer = gl.createBuffer();
+  const posLoc = gl.getAttribLocation(program, 'a_position');
+  const colorLoc = gl.getAttribLocation(program, 'a_color');
+  const sizeLoc = gl.getAttribLocation(program, 'a_size');
+  const matrixLoc = gl.getUniformLocation(program, 'u_viewProjection');
+  statusEl.insertAdjacentHTML('beforeend', '<br>WebXR hazard rendering active');
+
+  function onXRFrame(t, frame) {
+    const pose = frame.getViewerPose(refSpace);
+    const layer = session.renderState.baseLayer;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (pose) {
+      const vertices = [];
+      for (const m of (state.markers || [])) {
+        const c = xrColor(m.level);
+        const confidence = Math.max(.2, Math.min(1, Number(m.confidence ?? 1)));
+        vertices.push(Number(m.xyz_m[0]||0), Number(m.xyz_m[1]||0), -Number(m.xyz_m[2]||0), c[0], c[1], c[2], c[3]*confidence, Math.max(8, Math.min(64, Number(m.size_m||.05)*400)));
+      }
+      const data = new Float32Array(vertices);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+      gl.useProgram(program);
+      const stride = 8 * 4;
+      gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(colorLoc); gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, stride, 3*4);
+      gl.enableVertexAttribArray(sizeLoc); gl.vertexAttribPointer(sizeLoc, 1, gl.FLOAT, false, stride, 7*4);
+      for (const view of pose.views) {
+        const viewport = layer.getViewport(view); gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        const vp = multiply4x4(view.projectionMatrix, view.transform.inverse.matrix);
+        gl.uniformMatrix4fv(matrixLoc, false, vp);
+        gl.drawArrays(gl.POINTS, 0, data.length / 8);
+      }
+    }
+    session.requestAnimationFrame(onXRFrame);
+  }
+  session.requestAnimationFrame(onXRFrame);
+  session.addEventListener('end', () => statusEl.insertAdjacentHTML('beforeend', '<br>WebXR session ended'));
+}
+if (navigator.xr) {
+  navigator.xr.isSessionSupported('immersive-ar').then(ok => {
+    if (ok) {
+      xrButton.hidden = false;
+      xrButton.onclick = () => startXR().catch(err => { statusEl.textContent = `WebXR error: ${err.message}`; });
+    }
+  });
+}
+</script>
+</body>
+</html>

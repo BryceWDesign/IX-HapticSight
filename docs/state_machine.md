@@ -200,6 +200,6 @@ Cooldowns never inhibit safety motion; only inhibit new social contact nudges.
 
 10) Versioning
 
-FSM v0.1 corresponds to /docs/spec.md v0.1 and /src/ohip/* APIs OHIP_SCHEMAS_VERSION == v0.1.0.
+FSM v0.1 corresponds to /docs/spec.md v0.1 and /src/ohip/* APIs OHIP_SCHEMAS_VERSION == v0.2.0.
 
 Breaking changes to states/transitions bump minor version.

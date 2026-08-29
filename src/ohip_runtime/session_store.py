@@ -5,7 +5,7 @@ This module provides a small, explicit registry for InteractionSession objects.
 It is intentionally simple and backend-agnostic so it can be reused by:
 
 - local runtime coordinators
-- future ROS 2 wrappers
+- ROS 2 wrappers
 - replay tools
 - benchmark harnesses
 - integration tests

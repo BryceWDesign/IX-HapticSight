@@ -1,253 +1,69 @@
 # IX-HapticSight Roadmap
 
-This roadmap defines the planned upgrade path from the current reference implementation toward a stronger, more auditable, and more runtime-oriented safety stack for bounded optical-haptic interaction.
+IX-HapticSight is a safety-first perception-to-contact authority for robots and XR. The project keeps learned perception, planners, and LLMs outside the final physical safety authority.
 
-It is intentionally conservative.
+## M0: Protocol reference
+**Status: complete**
 
-The project is not represented as certified, clinically validated, production deployed, or regulator-approved. The roadmap describes engineering intent and repository milestones, not real-world deployment approval.
+Consent, state machine, contact planning, force envelopes, safety gating, retreat semantics, and core schemas.
 
----
+## M1: Auditable runtime
+**Status: complete**
 
-## Repository Mission
+Runtime coordination, explicit sessions/faults, normalized force/tactile/proximity/thermal interfaces, structured logging, replay, benchmark support, and simulated execution.
 
-IX-HapticSight is being developed as a safety-first optical-haptic interaction architecture for bounded human-facing robot behavior.
+## M2: Perception-to-hazard pipeline
+**Status: complete at reference-model level**
 
-The core project mission is to make these behaviors explicit, testable, and reviewable:
+RGB-D ingestion, executable segmentation, reproducible synthetic calibration training, independent model quorum, uncertainty handling, and vision-derived tri-level hazard voxels.
 
-- approach
-- pre-contact verification
-- bounded contact
-- retreat
-- safe hold
-- consent-aware interaction gating
-- hazard-aware veto behavior
-- auditable runtime policy evaluation
+**Remaining evidence:** field datasets, calibrated depth hardware, production segmentation models, adverse-lighting evaluation, occlusion benchmarks, and robot-specific camera calibration.
 
-The long-term direction is not broad social robotics.
+## M3: Independent physical safety authority
+**Status: complete at software reference level**
 
-The long-term direction is a measurable interaction-governance stack with deterministic safety constraints.
+Explicit `ALLOW`, `MODIFY`, and `DENY`; dynamic authority derating; consent enforcement; uncertainty stops; proximity stops; runtime invariant monitoring; force and speed clamping; deterministic recovery.
 
----
+**Remaining evidence:** hardware safety controller implementation, safety PLC/MCU partitioning, formal timing analysis, certified E-stop chain, and standards-specific validation.
 
-## Current Baseline
+## M4: ROS 2 and controller integration
+**Status: implementation complete, hardware validation pending**
 
-The current repository already contains:
+Bounded ROS 2 twist bridge, `WrenchStamped` force/torque ingestion, E-stop state, structured safety side-channel, and `FollowJointTrajectory` action client.
 
-- protocol schemas
-- consent logic
-- nudge scheduling logic
-- rest-pose generation
-- contact planning logic
-- safety gating logic
-- configuration files
-- example usage
-- baseline unit tests
+**Remaining evidence:** named robot/controller configuration, MoveIt Servo or equivalent integration, real robot joint limits, collision scene, calibration, and measured command/feedback latency.
 
-That is enough for a reference implementation, but not enough for a runtime-grade or evidence-backed package.
+## M5: XR observability
+**Status: implementation complete, device validation pending**
 
----
+WebXR observer with live safety-authority state, hazard markers, consent state, force/speed authority, and controller state.
 
-## Upgrade Goals
+**Remaining evidence:** headset-specific testing, spatial registration accuracy, user studies, and latency measurements.
 
-The upgrade campaign is designed to produce a stronger repository in the following areas:
+## M6: HIL evidence
+**Status: harness complete, measured evidence pending**
 
-1. **Repository credibility**
-   - cleaner project structure
-   - clearer scope and non-claims
-   - stronger contribution and review rules
-   - more disciplined release notes and artifacts
+The harness rejects synthetic HIL claims. A PASS requires positive hardware capability detection and measured samples meeting declared limits.
 
-2. **Runtime architecture**
-   - package separation by responsibility
-   - runtime coordinator structure
-   - ROS 2-compatible package layout
-   - explicit interfaces and message models
+**Exit criteria for a real HIL PASS:**
+- robot motion hardware present;
+- live force/torque source present;
+- time-synchronized measurements;
+- declared sample count reached;
+- force and latency limits not exceeded;
+- fault injection and recovery captured;
+- evidence bundle retained.
 
-3. **Safety behavior**
-   - stronger veto architecture
-   - explicit fault handling
-   - retreat semantics
-   - stale-consent rejection
-   - independent policy enforcement paths
+## M7: Physical robot validation
+**Status: not yet claimed**
 
-4. **Physical sensing interfaces**
-   - force-torque input abstraction
-   - tactile sensor input abstraction
-   - proximity input abstraction
-   - thermal input abstraction
-   - contact-state fusion hooks
+Required work includes physical contact trials, diverse-object manipulation, human-proximity validation, measured recovery, controller stress testing, failure injection, sim-to-real comparison, and independent review.
 
-5. **Evidence and replay**
-   - structured logs
-   - replay tooling
-   - deterministic benchmark scenarios
-   - simulation scene packs
-   - hardware-in-the-loop scaffolding
+## M8: Production / certification track
+**Status: future**
 
-6. **Governance**
-   - threat model artifacts
-   - privacy and data handling docs
-   - safety invariant traceability
-   - standards crosswalk
-   - safety-case starter materials
+Hardware-specific safety case, applicable standards work, deployment controls, privacy review, cybersecurity, manufacturing constraints, and external validation.
 
----
+## Non-negotiable claim rule
 
-## Planned Maturity Levels
-
-### M0 — Reference Prototype
-Status: approximately current state
-
-Characteristics:
-- pure Python reference modules
-- documentation-first posture
-- baseline configs and tests
-- no real runtime messaging layer
-- no tactile or hardware abstraction layer
-- no benchmark suite
-- no HIL scaffolding
-
-### M1 — Structured Repository
-Planned outcome:
-- stronger packaging
-- contribution and release hygiene
-- clarified roadmap, non-claims, and project boundaries
-- expanded project documentation
-
-Exit criteria:
-- repository structure is stable
-- upgrade plan is documented
-- contribution rules and release notes exist
-- package metadata is present
-
-### M2 — Modular Runtime Foundation
-Planned outcome:
-- logical package separation
-- runtime coordination interfaces
-- ROS 2 workspace and node scaffolding
-- message and service definitions
-- launch and configuration layering
-
-Exit criteria:
-- runtime module boundaries are explicit
-- state ownership is clearer
-- node lifecycle assumptions are documented
-- configuration loading is centralized
-
-### M3 — Safety-Grade Execution Layer
-Planned outcome:
-- motion execution adapter interfaces
-- collision and zone gating
-- retreat/abort logic
-- watchdog behavior
-- dual-path veto design
-- stronger fault handling tests
-
-Exit criteria:
-- execution boundaries are explicit
-- abort and retreat semantics are testable
-- safety behavior is separated from convenience behavior
-
-### M4 — Physical Signal Integration
-Planned outcome:
-- force-torque interfaces
-- tactile interfaces
-- proximity interfaces
-- thermal interfaces
-- contact-state fusion logic
-- simulated sensor fixtures
-
-Exit criteria:
-- the codebase can represent measured contact-related inputs
-- the planner and safety logic can consume those inputs without hidden assumptions
-
-### M5 — Evidence, Replay, and Benchmarking
-Planned outcome:
-- structured event logs
-- replay tooling
-- benchmark schemas
-- canonical scenarios
-- metrics reports
-- deterministic result packages
-
-Exit criteria:
-- behavior changes can be replayed
-- benchmark outputs are comparable
-- metrics are documented and reproducible
-
-### M6 — HIL and Safety Case Readiness
-Planned outcome:
-- hardware-in-the-loop scaffolding
-- calibration templates
-- fault injection templates
-- standards crosswalk
-- privacy and governance docs
-- safety invariant traceability matrix
-- safety-case starter pack
-
-Exit criteria:
-- the repository supports disciplined evidence collection
-- traceability exists between requirements, tests, and claims
-- governance artifacts exist for future review
-
----
-
-## What This Project Is Not
-
-The repository should not drift into claims it cannot support.
-
-It is not:
-
-- a certified collaborative robot package
-- a medical device
-- a therapy robot
-- a proven emotion-recognition engine
-- a production deployment stack
-- a substitute for hardware safety engineering
-- a substitute for legal, regulatory, or IRB review
-- a claim of socially correct behavior in all settings
-
----
-
-## Evidence Philosophy
-
-The strongest form of this project will rely on:
-
-- explicit requirements
-- deterministic safety behavior
-- replayable logs
-- bounded contact semantics
-- benchmark scenarios
-- hardware-in-the-loop evidence
-- traceable documentation
-
-Preference is always given to measured evidence over narrative claims.
-
----
-
-## Release Philosophy
-
-The planned release direction is:
-
-- v0.1.x: reference implementation baseline
-- v0.2.x: repository restructuring and modularization
-- v0.3.x: runtime and ROS 2 scaffolding
-- v0.4.x: sensing interfaces and execution safety expansion
-- v0.5.x: replay and benchmark package
-- v0.6.x: HIL scaffolding and safety-case preparation
-- v1.0.0: strong repository milestone, still bounded by explicit non-claims unless real evidence justifies more
-
----
-
-## Final Roadmap Rule
-
-Every major upgrade should improve at least one of these:
-
-- safety
-- clarity
-- testability
-- traceability
-- replayability
-- boundedness
-
-If it does not improve one of those, it should be treated as optional, not core.
+Simulation, software tests, ROS 2 adapter availability, and synthetic calibration do not become physical evidence by wording. IX-HapticSight should only claim what an artifact or measurement actually demonstrates.
